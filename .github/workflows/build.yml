@@ -1,0 +1,80 @@
+name: build
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    # The type of runner that the job will run on
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Operating System
+        run: echo ${{ matrix.os }}
+
+      - name: Cache node_modules
+        id: modules-cache
+        uses: actions/cache@v3
+        with:
+          path: ./node_modules
+          key: ${{ runner.os }}-modules-${{ hashFiles('package-lock.json') }}
+          # key: ${{ runner.os }}-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install node_modules if necessary
+        if: steps.modules-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: npm ci --frozen-lockfile
+    
+
+          
+      - name: npm ci, build and test
+        run: |
+          npm run build
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}
+          path: 'build' 
+        continue-on-error: true
+        
+      - name: Upload github pages artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'build/.'
+        continue-on-error: true
+
+  deploy:
+          # Add a dependency to the build job
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: 'https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/'
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy
+        uses: actions/deploy-pages@v4
