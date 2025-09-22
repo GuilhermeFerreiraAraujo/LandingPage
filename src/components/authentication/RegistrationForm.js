@@ -84,7 +84,8 @@ const RegistrationForm = ({ setIsAuthenticated }) => {
 };
 
 RegistrationForm.propTypes = {
-  hasLabel: PropTypes.bool
+  hasLabel: PropTypes.bool,
+  setIsAuthenticated: PropTypes.func
 };
 
 export default RegistrationForm;
